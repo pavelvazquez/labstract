@@ -6,5 +6,5 @@ Usage:
 
 python3 labstract.py -h
 
-<img src="labstract.svg" width="200"/>
+<img src="labstract.svg" width="800"/>
 

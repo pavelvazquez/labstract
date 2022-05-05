@@ -18,8 +18,8 @@ import argparse
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-i','--input', help= 'path to input file', default='data_input.csv')
-parser.add_argument('-o','--output', help= 'path to output file of abstracts', default='./data_output.csv')
+parser.add_argument('-i','--input', help= 'path to input file', default='data_input.tsv')
+parser.add_argument('-o','--output', help= 'path to output file of abstracts', default='./data_output.tsv')
 parser.add_argument('-q','--query', help= 'Pubmed query as string')
 parser.add_argument('-e','--email', help="Optional. Email for entrez")
 parser.add_argument('-t','--type', help= 'vectorizer type. Use: count or tfidf', default='tfidf')
@@ -28,6 +28,8 @@ parser.add_argument('-c','--cluster', help= 'Number of clusters to use', default
 parser.add_argument('-m','--mode', help= 'Test, kcluster (K-Means Clustering) or acluster(Agglomerative Clustering *)')
 parser.add_argument('-a','--affinity', help= 'To be used allong with Agglomerative Clustering. Can be “euclidean”, “l1”, “l2”, “manhattan”, “cosine”, default is cosine', default='cosine')
 parser.add_argument('-v','--verbose', help="Optional. Plot 3d")
+parser.add_argument('-p','--plotgraph', help="Plot connectivity forced graph", default='')
+parser.add_argument('-s','--screen', help="Plot in screen? 0 or 1", default=0)
 args = parser.parse_args()
 
 ##Variable parser
@@ -40,7 +42,7 @@ mode=args.mode
 ncomponents=int(args.components)
 ncluster=int(args.cluster)
 
-from modules import pubmed,wm2df,test,cluster,cosinef
+from modules import pubmed,wm2df,test,cluster,cluster_labels,cosinef
 
 
 
@@ -50,12 +52,12 @@ from modules import pubmed,wm2df,test,cluster,cosinef
 #File read. TODO: other formats and search query
 if args.query:
     df=pubmed(args.query,args.email)
-    df.to_csv(args.output,index=False)
+    df.to_csv(args.output,sep='\t',index=False)
 else:
     print('reading file', filename)    
-    df = pd.read_csv (filename)
+    df = pd.read_csv (filename,sep='\t')
 
-####Drop the papers with no DOI
+
 df.dropna(inplace=True)
 df.reset_index(drop=True, inplace=True)
 
@@ -84,13 +86,7 @@ X_sparse = csr_matrix(X)
 X_sparse_tsvd = tsvd.fit(X_sparse).transform(X_sparse)
 
 
-#### 2d Plots #############
-#sns.scatterplot(
- #   x=X_sparse_tsvd[:,1], y=X_sparse_tsvd[:,2],
-  #  alpha=0.3
-#)
 
-#########################
 
 if mode=='test':
     ###PCA componentsevaluation
@@ -99,12 +95,12 @@ if mode=='test':
 
 if mode=='kcluster':
     #Cluster by Kmeans
-    cluster(ncluster,X_sparse_tsvd,df.pmid)
+    cluster(ncluster,X_sparse_tsvd,df.pmid,args.screen)
     
  
 #Calculate the distance matrix
 if mode=="acluster":
-    cosinef(X,X_sparse_tsvd,ncluster,df.pmid)
+    cosinef(X,X_sparse_tsvd,ncluster,df.pmid,args.screen)
 
 
 
@@ -115,8 +111,27 @@ if args.verbose:
     print(largest)
     print('Variance',tsvd.explained_variance_ratio_.sum())
 
-#Plot the conectivity graph 
-#g = igraph.Graph.Weighted_Adjacency(G.tolist())
-
-#out=igraph.plot(g, edge_width=0.1,edge_arrow_size=0.001,edge_color=(200, 200, 200), vertex_size=12, layout='kk')
-#out.save('./results/%s.png' % month)
+if str(args.plotgraph)=='scatter':
+    print('Printing 2d scatter')
+    #### 2d Plots #############
+    labels=cluster_labels(ncluster,X_sparse_tsvd,df.pmid)
+    import matplotlib.pyplot as plt
+    plt.scatter(x=X_sparse_tsvd[:,1], y=X_sparse_tsvd[:,2],c=labels)
+    plt.savefig('scatterplot.png')
+    #########################
+if str(args.plotgraph)=='network':
+    import numpy as np
+    import igraph
+    print('Printing 2d network')
+    A=vector.toarray()
+    G=np.dot(A,A.T)
+    labels=cluster_labels(ncluster,X_sparse_tsvd,df.pmid)
+    for k in range (0,len(G)):   
+        G[k][k]=0
+    g = igraph.Graph.Weighted_Adjacency(G.tolist())
+    pal = igraph.drawing.colors.ClusterColoringPalette(len(labels))
+    g.vs['color'] = pal.get_many(labels)
+    out=igraph.plot(g, edge_width=0.1,edge_arrow_size=0.001,edge_color=(200, 200, 200), vertex_size=12, layout='kk')
+    out.save('network.png')
+     #out=igraph.plot(g, edge_width=0.1,edge_arrow_size=0.001,edge_color=(200, 200, 200), vertex_size=12, layout='kk')
+     #out.save('./results/%s.png' % month)

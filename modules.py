@@ -52,37 +52,48 @@ def test(variance,X,ncomponents):
     ##Kmeans inertias evaluation
     from sklearn.cluster import KMeans 
     inertias = []
-    for k in range(1,10):
+    for k in range(1,20):
         model = KMeans(n_clusters=k) 
         model.fit(X[:,:3])
         inertias.append(model.inertia_)
     ##Plot
-    ax2.plot(range(1,10), inertias, '-p', color='red')
+    ax2.plot(range(1,20), inertias, '-p', color='red')
     ax1.set_title('PCA Components')
     ax2.set_title('Clusters')
     plt.show()
     return()
 
 ###Cluster by Kmeans
-def cluster(ncluster,X,pmid):
+def cluster(ncluster,X,pmid,ns):
     from sklearn.cluster import KMeans
     import matplotlib.pyplot as plt
     model = KMeans(n_clusters=ncluster)
     model.fit(X[:,:2])
     labels = model.predict(X[:,:2])  
-
+    
     from mpl_toolkits.mplot3d import Axes3D
     fig = plt.figure()
     ax = Axes3D(fig)
     ax.scatter(X[:,0],X[:,1],X[:,2], c=labels)
-    for i in range(0,len(pmid)):
-        ax.text(X[i,0],X[i,1],X[i,2],pmid[i], size=8)
-    plt.show()
+    #for i in range(0,len(pmid)):
+     #   ax.text(X[i,0],X[i,1],X[i,2],pmid[i], size=8)
+    if ns==1:
+        plt.show()     
+    else:
+        plt.savefig('kcluster.png')
+
     
     return()
 
+def cluster_labels(ncluster,X,pmid):
+    from sklearn.cluster import KMeans
+    model = KMeans(n_clusters=ncluster)
+    model.fit(X[:,:2])
+    labels = model.predict(X[:,:2])  
+    return(labels)
+
 ####Cosine similarity
-def cosinef(X,Xs,ncluster,pmid):
+def cosinef(X,Xs,ncluster,pmid,ns):
     from sklearn.cluster import AgglomerativeClustering
     import matplotlib.pyplot as plt
     model=AgglomerativeClustering(affinity='cosine',n_clusters=ncluster,linkage='complete').fit(X)
@@ -91,7 +102,10 @@ def cosinef(X,Xs,ncluster,pmid):
     fig = plt.figure()
     ax = Axes3D(fig)
     ax.scatter(Xs[:,0],Xs[:,1],Xs[:,2], c=labels)
-    for i in range(0,len(pmid)):
-        ax.text(Xs[i,0],Xs[i,1],Xs[i,2],pmid[i], size=8)
-    plt.show()
+    #for i in range(0,len(pmid)):
+     #   ax.text(Xs[i,0],Xs[i,1],Xs[i,2],pmid[i], size=8)
+    if ns=='show':
+        plt.show()
+    else:
+        plt.savefig('acluster.png')
     return()
